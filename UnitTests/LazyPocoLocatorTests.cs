@@ -13,6 +13,8 @@ namespace UnitTests
         /// </summary>
         private const BindingFlags PubNonPubInstanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
+        #region Class Locating Tests
+
         [Fact]
         public void Locator_CanFindClass_WithPublicProperties()
         {
@@ -126,6 +128,10 @@ namespace UnitTests
             testedType.GetFields(PubNonPubInstanceFlags).Should().HaveCountGreaterThan(0, "otherwise this test is not really validating anything");
         }
 
+        #endregion Class Locating Tests
+
+        #region Record Locating Tests
+
         [Theory]
         [InlineData(typeof(PositionalRecord))]
         [InlineData(typeof(PositionalRecordWithAdditionalPropery))]
@@ -149,5 +155,71 @@ namespace UnitTests
             locator.LocatedTypes.Should().Contain(testedType);
             locatedProperties.Should().BeEquivalentTo(testedType.GetProperties(BindingFlags.Instance | BindingFlags.Public));
         }
+
+        #endregion Record Locating Tests
+
+        #region Struct Locating Tests
+
+        [Fact]
+        public void Locator_CanFindStruct_WithPublicProperties()
+        {
+            LazyPOCOLocator locator = new();
+            Type testedType = typeof(PublicStructPublicProperties);
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Properties, false);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+            locatedProperties.Should().BeEquivalentTo(testedType.GetProperties(BindingFlags.Instance | BindingFlags.Public));
+        }
+
+        [Fact]
+        public void Locator_CanFindStruct_WithPrivateProperties()
+        {
+            LazyPOCOLocator locator = new();
+            Type testedType = typeof(PublicStructPrivateProperties);
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.NonPublic, TestedDataMembers.Properties, false);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+            locatedProperties.Should().BeEquivalentTo(testedType.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic));
+        }
+
+        [Fact]
+        public void Locator_CanFindStruct_WithPublicFields()
+        {
+            LazyPOCOLocator locator = new();
+            Type testedType = typeof(PublicStructPublicFields);
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Fields, false);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            FieldInfo[] locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+            locatedFields.Should().BeEquivalentTo(testedType.GetFields(BindingFlags.Instance | BindingFlags.Public));
+        }
+
+        [Fact]
+        public void Locator_CanFindStruct_WithPrivateFields()
+        {
+            LazyPOCOLocator locator = new();
+            Type testedType = typeof(PublicStructPrivateFields);
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.NonPublic, TestedDataMembers.Fields, false);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            FieldInfo[] locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+            locatedFields.Should().BeEquivalentTo(testedType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic));
+        }
+
+        #endregion Struct Locating Tests
     }
 }

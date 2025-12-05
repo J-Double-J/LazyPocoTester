@@ -14,6 +14,8 @@ namespace LazyPocoTester
             "Microsoft"
         };
 
+        private static readonly ConstructorInfo StructCtorStandIn = typeof(RuntimeStructCtorPlaceholder).GetConstructor(Type.EmptyTypes)!;
+
         /// <summary>
         /// Pre-located type information with <see cref="Type.AssemblyQualifiedName"/> used as keys.
         /// </summary>
@@ -28,12 +30,16 @@ namespace LazyPocoTester
                 .Where(a => a.Location.Length > 0)  // Non-dynamic assemblies and those that reside in BIN folder
                 .ToArray();
 
+            
+
             foreach (Assembly assembly in assemblies)
             {
                 foreach (Type type in assembly.GetTypes()
-                                              .Where(t => t.IsClass && !t.IsAbstract && !t.IsNestedPrivate)
+                                              .Where(t => ValidClass(t) || ValidStruct(t))
                                               .Where(t => t.GetCustomAttribute<POCOTestAttribute>() is not null))
                 {
+                    string debugTypeName = type.Name; // Only used for pre-release testing.
+
                     if (!IsValidPOCOTypeForTesting(type, configuration, out LocatedTypeInformation locatedTypeInformation)) { continue; }
 
                     LocatedTypeInformation.Add(type.AssemblyQualifiedName!, locatedTypeInformation);
@@ -41,6 +47,8 @@ namespace LazyPocoTester
                 }
             }
         }
+        private static bool ValidClass(Type t) => t.IsClass && !t.IsAbstract;
+        private static bool ValidStruct(Type t) => t.IsValueType && !t.IsPrimitive && !t.IsEnum;
 
         private bool AssemblyIsNotSytemLibraries(Assembly assembly)
         {
@@ -68,13 +76,6 @@ namespace LazyPocoTester
         private bool IsValidPOCOTypeForTesting(Type type, LazyPocoConfiguration configuration, out LocatedTypeInformation locatedTypeInformation)
         {
             locatedTypeInformation = new();
-
-            if (type.IsAbstract || type.IsInterface || type.BaseType != typeof(object))
-            {
-                // Not a concrete base class
-                return false;
-            }
-
 
             if (!HasValidConstructor(type, configuration, locatedTypeInformation))
             {
@@ -140,12 +141,21 @@ namespace LazyPocoTester
                 return true;
             }
 
-            if(!configuration.TryToCreateNonDefaultConstructors)
+            bool isStruct = ValidStruct(type);
+
+            // If it is a struct we will skip this check so that we can see if there are any explicit ctors first.
+            if (!isStruct && !configuration.TryToCreateNonDefaultConstructors)
             {
                 return false;
             }
 
             ConstructorInfo[] constructors = type.GetConstructors((BindingFlags)configuration.AccessibilityFlags | BindingFlags.Instance);
+            if(isStruct && constructors.Length == 0)
+            {
+                // The parameterless constructor is dynamically created for the struct and is not fetchable.
+                locatedTypeInformation.UsuableConstructor = StructCtorStandIn;
+                return true;
+            }
 
             if ((configuration.TestedDataMembers & TestedDataMembers.Properties) == TestedDataMembers.Properties)
             {
@@ -178,8 +188,6 @@ namespace LazyPocoTester
                     }
                 }
             }
-
-            
 
             return false;
         }
