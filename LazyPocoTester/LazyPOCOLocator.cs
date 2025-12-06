@@ -103,22 +103,32 @@ namespace LazyPocoTester
             if ((configuration.TestedDataMembers & TestedDataMembers.Properties) == TestedDataMembers.Properties)
             {
                 PropertyInfo[] testedProperties = type.GetProperties((BindingFlags)configuration.AccessibilityFlags | BindingFlags.Instance);
+                List<PropertyInfo> testableProperties = new();
+                bool isValid;
+
                 foreach (PropertyInfo prop in testedProperties)
                 {
+                    isValid = true;
+
                     if (!prop.CanRead || !prop.CanWrite)
                     {
                         // Property is not read-write
-                        return false;
+                        isValid = false;
                     }
 
                     if (!POCOTestCoordinator.DefaultSupportedTypes.Contains(prop.PropertyType))
                     {
                         // Property type is not primitive
-                        return false;
+                        isValid = false;
+                    }
+
+                    if(isValid)
+                    {
+                        testableProperties.Add(prop);
                     }
                 }
 
-                locatedTypeInformation.Properties = testedProperties;
+                locatedTypeInformation.Properties = [.. testableProperties];
             }
 
             return true;

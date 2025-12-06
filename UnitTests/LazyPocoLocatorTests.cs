@@ -139,11 +139,9 @@ namespace UnitTests
         [InlineData(typeof(PositionalRecordWithCustomCtor))]
         [InlineData(typeof(SealedRecord))]
         [InlineData(typeof(RecordStruct))]
-        [InlineData(typeof(RecordStructWithComputedMember))]
         [InlineData(typeof(BasePositionalRecordAnimal))]
         [InlineData(typeof(DerivedPositionalRecordDog))]
-        [InlineData(typeof(RecordWithFactoryToken))]
-        public void Locator_CanFindAllPublicRecords_OfType(Type testedType)
+        public void Locator_CanFindAllPublicRecordsPublicProperties_OfType(Type testedType)
         {
             LazyPOCOLocator locator = new();
 
@@ -154,6 +152,26 @@ namespace UnitTests
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
             locatedProperties.Should().BeEquivalentTo(testedType.GetProperties(BindingFlags.Instance | BindingFlags.Public));
+        }
+
+        [Theory]
+        [InlineData(typeof(PublicClassWithAComputedProperty))]
+        [InlineData(typeof(RecordStructWithComputedMember))]
+        [InlineData(typeof(RecordWithFactoryToken))]
+        public void Locator_CanIgnoreNonWritableProperties_OnRecords(Type testedType)
+        {
+            LazyPOCOLocator locator = new();
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.PublicAndNonPublic, TestedDataMembers.Properties, true);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            
+            PropertyInfo[] propertiesOnType = testedType.GetProperties(PubNonPubInstanceFlags);
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+            locatedProperties.Should().HaveCount(propertiesOnType.Length - 1, "the type in this test has one readonly computed property")
+                             .And.Subject.Should().HaveCountGreaterThan(0);
         }
 
         #endregion Record Locating Tests

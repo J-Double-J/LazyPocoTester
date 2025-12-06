@@ -51,17 +51,7 @@ namespace TestPOCOs.TestObjects
     public record DerivedPositionalRecordDog(string Species, string Breed)
         : BasePositionalRecordAnimal(Species);
 
-    // 9. Inheritance with non-positional base
-    public record BaseNonPositionalRecordVehicle
-    {
-        public int Wheels { get; init; }
-    }
-    public record DerivedPositionalRecordFromNonPositionalRecordCar(int Wheels, string Make)
-        : BaseNonPositionalRecordVehicle
-    {
-    }
-
-    // 10. Private constructor with factory
+    // 9. Private constructor with factory
     [POCOTest]
     public record RecordWithFactoryToken
     {
