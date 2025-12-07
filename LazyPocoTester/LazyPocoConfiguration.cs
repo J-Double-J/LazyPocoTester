@@ -9,7 +9,7 @@ namespace LazyPocoTester
         public TestedDataMembers TestedDataMembers { get; internal set; } = TestedDataMembers.Properties;
 
         /// <summary>
-        /// If <see langword="true"/> tells the <see cref="POCOTestCoordinator"/> to try to find a constructor
+        /// If <see langword="true"/> tells the <see cref="POCOTester"/> to try to find a constructor
         /// that only takes simple types
         /// </summary>
         public bool TryToCreateNonDefaultConstructors { get; internal set; } = false;

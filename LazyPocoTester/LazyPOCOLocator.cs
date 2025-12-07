@@ -1,4 +1,5 @@
-﻿using LazyPocoTester.Enums;
+﻿using Microsoft.Extensions.DependencyModel;
+using LazyPocoTester.Enums;
 using System.Diagnostics;
 using System.Reflection;
 
@@ -7,12 +8,6 @@ namespace LazyPocoTester
     internal class LazyPOCOLocator
     {
         private List<Type> _pocoTypes = new List<Type>();
-
-        private static string[] systemLibrarysPrefixes = new string[2]
-        {
-            "System",
-            "Microsoft"
-        };
 
         private static readonly ConstructorInfo StructCtorStandIn = typeof(RuntimeStructCtorPlaceholder).GetConstructor(Type.EmptyTypes)!;
 
@@ -25,19 +20,26 @@ namespace LazyPocoTester
 
         internal void LocateTestObjects(LazyPocoConfiguration configuration)
         {
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => AssemblyIsNotSytemLibraries(a))
-                .Where(a => a.Location.Length > 0)  // Non-dynamic assemblies and those that reside in BIN folder
-                .ToArray();
+            DependencyContext? context = DependencyContext.Default;
 
-            foreach (Assembly assembly in assemblies)
+            Debug.Assert(context != null);
+
+            Assembly[] projectAssemblies = context.RuntimeLibraries
+                                                  .Where(lib => lib.Type == "project")   // Only project libraries
+                                                  .Select(lib => lib.Name)
+                                                  .Select(Assembly.Load)                 // Load by simple name
+                                                  .ToArray();
+
+
+            foreach (Assembly assembly in projectAssemblies)
             {
                 foreach (Type type in assembly.GetTypes()
                                               .Where(t => ValidClass(t) || ValidStruct(t))
                                               .Where(t => t.GetCustomAttribute<POCOTestAttribute>() is not null))
                 {
+#if DEBUG
                     string debugTypeName = type.Name; // Only used for pre-release testing.
-
+#endif
                     if (!IsValidPOCOTypeForTesting(type, configuration, out LocatedTypeInformation locatedTypeInformation)) { continue; }
 
                     LocatedTypeInformation.Add(type.AssemblyQualifiedName!, locatedTypeInformation);
@@ -45,23 +47,8 @@ namespace LazyPocoTester
                 }
             }
         }
-        private static bool ValidClass(Type t) => t.IsClass && !t.IsAbstract;
-        private static bool ValidStruct(Type t) => t.IsValueType && !t.IsPrimitive && !t.IsEnum;
-
-        private bool AssemblyIsNotSytemLibraries(Assembly assembly)
-        {
-            Debug.Assert(assembly.FullName != null);
-
-            foreach (string prefix in systemLibrarysPrefixes)
-            {
-                if(assembly.FullName!.StartsWith(prefix))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
+        internal static bool ValidClass(Type t) => t.IsClass && !t.IsAbstract;
+        internal static bool ValidStruct(Type t) => t.IsValueType && !t.IsPrimitive && !t.IsEnum;
 
         internal IEnumerable<Type> GetNextTestableType()
         {
@@ -140,7 +127,11 @@ namespace LazyPocoTester
 
             if ((configuration.TestedDataMembers & TestedDataMembers.Properties) == TestedDataMembers.Properties)
             {
-                properties = type.GetProperties((BindingFlags)configuration.AccessibilityFlags | BindingFlags.Instance);
+                // Get the properties and filter out the EqualityContract auto-generated property for records
+                properties = type.GetProperties((BindingFlags)configuration.AccessibilityFlags | BindingFlags.Instance)
+                                 .Where(p => !(p.Name == "EqualityContract" && p.GetType().Name == "RuntimePropertyInfo")) 
+                                 .ToArray();
+
 
                 foreach (ConstructorInfo constructor in constructors)
                 {
@@ -199,7 +190,7 @@ namespace LazyPocoTester
                     }
                 }
 
-                if (!POCOTestCoordinator.DefaultSupportedTypes.Contains(field.FieldType))
+                if (!POCOTester.DefaultSupportedTypes.Contains(field.FieldType))
                 {
                     // Field type is not "primitive"
                     continue;
@@ -227,7 +218,7 @@ namespace LazyPocoTester
                     isValid = false;
                 }
 
-                if (!POCOTestCoordinator.DefaultSupportedTypes.Contains(prop.PropertyType))
+                if (!POCOTester.DefaultSupportedTypes.Contains(prop.PropertyType))
                 {
                     // Property type is not primitive
                     isValid = false;

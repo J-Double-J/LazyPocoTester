@@ -1,10 +1,9 @@
 ﻿using FluentAssertions;
-using LazyPocoTester;
 using LazyPocoTester.Enums;
 using System.Reflection;
 using TestPOCOs.TestObjects;
 
-namespace UnitTests
+namespace LazyPocoTester.UnitTests
 {
     public class LazyPocoLocatorTests
     {

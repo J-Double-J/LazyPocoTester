@@ -29,11 +29,10 @@ namespace LazyPocoTester
             _configuration.LocatedTypeInformation = locator.LocatedTypeInformation;
 
             foreach (object[] objArray in locator.GetNextTestableType()
-                                                    .Select(type => new object[] { _configuration, type }) ?? [])
+                                                 .Select(type => new object[] { _configuration, type }) ?? [])
             {
                 yield return objArray;
             }
         }
-
     }
 }

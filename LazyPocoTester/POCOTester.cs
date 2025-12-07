@@ -4,13 +4,13 @@ using Xunit;
 
 namespace LazyPocoTester
 {
-    public class POCOTestCoordinator
+    public class POCOTester
     {
         private static readonly HashSet<Type> _defaultSupportedTypes;
         
         internal static IReadOnlySet<Type> DefaultSupportedTypes => _defaultSupportedTypes;
 
-        static POCOTestCoordinator()
+        static POCOTester()
         {
             _defaultSupportedTypes = new HashSet<Type>
             {
@@ -40,7 +40,7 @@ namespace LazyPocoTester
             };
         }
 
-        public POCOTestCoordinator()
+        public POCOTester()
         {
         }
 
@@ -48,7 +48,7 @@ namespace LazyPocoTester
         {
             if (!configuration.LocatedTypeInformation.TryGetValue(type.AssemblyQualifiedName!, out LocatedTypeInformation? information))
             {
-                throw new InvalidOperationException($"{nameof(POCOTestCoordinator)} expected type information to be located and cached and is not able to find it in the {nameof(configuration)}.");
+                throw new InvalidOperationException($"{nameof(POCOTester)} expected type information to be located and cached and is not able to find it in the {nameof(configuration)}.");
             }
 
             object obj = CreateInstance(information!, type);
@@ -56,8 +56,6 @@ namespace LazyPocoTester
             TestProperties(information, type, obj);
             TestFields(information, type, obj);
         }
-
-        
 
         private static void TestProperties(LocatedTypeInformation information, Type type, object obj)
         {
@@ -114,11 +112,11 @@ namespace LazyPocoTester
                     defaultValues[i] = CreateDefaultForValue(ctorParams[i].ParameterType);
                 }
 
-                return Activator.CreateInstance(type, defaultValues)!;
+                return typeInformation.UsuableConstructor.Invoke(defaultValues);
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"{nameof(POCOTestCoordinator)} was unable to create an instance of {type.FullName}", ex);
+                throw new InvalidOperationException($"{nameof(POCOTester)} was unable to create an instance of {type.FullName}", ex);
             }
         }
 
