@@ -23,7 +23,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Properties, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -38,7 +38,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.NonPublic, TestedDataMembers.Properties, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -53,7 +53,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Fields, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            FieldInfo[] locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
+            List<FieldInfo> locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -68,7 +68,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.NonPublic, TestedDataMembers.Fields, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            FieldInfo[] locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
+            List<FieldInfo> locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -84,7 +84,7 @@ namespace UnitTests
             // Make it so we can't find private properties
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Properties, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -101,7 +101,7 @@ namespace UnitTests
             // Make it so we can't find private properties
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Fields, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            FieldInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
+            List<FieldInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -128,6 +128,87 @@ namespace UnitTests
             testedType.GetFields(PubNonPubInstanceFlags).Should().HaveCountGreaterThan(0, "otherwise this test is not really validating anything");
         }
 
+        [Fact]
+        public void Locator_CanFindAllPublicProperties_OfBaseAndDerivedClass()
+        {
+            LazyPOCOLocator locator = new();
+            Type testedType = typeof(PublicPOCODerivedClass);
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Properties, false);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+            locatedProperties.Should().HaveCount(2, $"there is one base property and one property in {nameof(PublicPOCODerivedClass)}");
+            locatedProperties.Should().BeEquivalentTo(testedType.GetProperties(BindingFlags.Public | BindingFlags.Instance));
+
+            testedType.GetProperties(PubNonPubInstanceFlags).Should().HaveCountGreaterThan(0, "otherwise this test is not really validating anything");
+            testedType.GetFields(PubNonPubInstanceFlags).Should().HaveCountGreaterThan(0, "otherwise this test is not really validating anything");
+        }
+
+        [Fact]
+        public void Locator_CanFindMixedDerivedClass_WithNonDefaultConstructors()
+        {
+            LazyPOCOLocator locator = new();
+            Type testedType = typeof(DerivedClassOfMixedBaseClassNoDefaultCtor);
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.PublicAndNonPublic, TestedDataMembers.PropertiesAndFieldsNoBacking, true);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            LocatedTypeInformation locatedTypesInformation = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!];
+
+            List<PropertyInfo> expectedProperties = testedType.GetProperties(PubNonPubInstanceFlags)
+                                                              .Concat(testedType.BaseType!.GetProperties(BindingFlags.NonPublic | BindingFlags.Instance))
+                                                              .DistinctBy(p => (p.DeclaringType, p.Name))
+                                                              .ToList();
+
+            List<FieldInfo> expectedFields = testedType.GetFields(PubNonPubInstanceFlags)
+                                                       .Concat(testedType.BaseType!.GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+                                                       .Where(f => !f.Name.EndsWith("k__BackingField"))
+                                                       .DistinctBy(f => (f.DeclaringType, f.Name))
+                                                       .ToList();
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+
+            locatedTypesInformation.Properties.Should().HaveCount(5);
+            locatedTypesInformation.Fields.Should().HaveCount(4);
+            locatedTypesInformation.Properties.Should().BeEquivalentTo(expectedProperties);
+            locatedTypesInformation.Fields.Should().BeEquivalentTo(expectedFields);
+        }
+
+        [Fact]
+        public void Locator_CanFindFieldsAndProperties_OfClassWithTwoHigherBaseClasses()
+        {
+            LazyPOCOLocator locator = new();
+            Type testedType = typeof(TwoDeepDerivedClassOfMixedBaseClasses);
+
+            LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.PublicAndNonPublic, TestedDataMembers.PropertiesAndFieldsNoBacking, true);
+            locator.LocateTestObjects(lazyPocoConfiguration);
+            LocatedTypeInformation locatedTypesInformation = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!];
+
+            List<PropertyInfo> expectedProperties = testedType.GetProperties(PubNonPubInstanceFlags)
+                                                              .Concat(testedType.BaseType!.GetProperties(BindingFlags.NonPublic | BindingFlags.Instance))
+                                                              .Concat(testedType.BaseType!.BaseType!.GetProperties(BindingFlags.NonPublic | BindingFlags.Instance))
+                                                              .DistinctBy(p => (p.DeclaringType, p.Name))
+                                                              .ToList();
+
+            List<FieldInfo> expectedFields = testedType.GetFields(PubNonPubInstanceFlags)
+                                                       .Concat(testedType.BaseType!.GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+                                                       .Concat(testedType.BaseType!.BaseType!.GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+                                                       .Where(f => !f.Name.EndsWith("k__BackingField"))
+                                                       .DistinctBy(f => (f.DeclaringType, f.Name))
+                                                       .ToList();
+
+            locator.LocatedTypes.Should().NotBeEmpty();
+            locator.LocatedTypes.Should().Contain(testedType);
+
+            locatedTypesInformation.Properties.Should().HaveCount(6);
+            locatedTypesInformation.Fields.Should().HaveCount(5);
+            locatedTypesInformation.Properties.Should().BeEquivalentTo(expectedProperties);
+            locatedTypesInformation.Fields.Should().BeEquivalentTo(expectedFields);
+        }
+
         #endregion Class Locating Tests
 
         #region Record Locating Tests
@@ -147,7 +228,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Properties, true);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -164,7 +245,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.PublicAndNonPublic, TestedDataMembers.Properties, true);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
             
             PropertyInfo[] propertiesOnType = testedType.GetProperties(PubNonPubInstanceFlags);
 
@@ -186,7 +267,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Properties, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -201,7 +282,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.NonPublic, TestedDataMembers.Properties, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            PropertyInfo[] locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
+            List<PropertyInfo> locatedProperties = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Properties;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -216,7 +297,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.Public, TestedDataMembers.Fields, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            FieldInfo[] locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
+            List<FieldInfo> locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);
@@ -231,7 +312,7 @@ namespace UnitTests
 
             LazyPocoConfiguration lazyPocoConfiguration = new LazyPocoConfiguration(AccessibilityFlags.NonPublic, TestedDataMembers.Fields, false);
             locator.LocateTestObjects(lazyPocoConfiguration);
-            FieldInfo[] locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
+            List<FieldInfo> locatedFields = locator.LocatedTypeInformation[testedType.AssemblyQualifiedName!].Fields;
 
             locator.LocatedTypes.Should().NotBeEmpty();
             locator.LocatedTypes.Should().Contain(testedType);

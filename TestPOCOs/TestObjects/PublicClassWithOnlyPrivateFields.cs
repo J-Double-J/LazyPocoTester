@@ -5,7 +5,6 @@ namespace TestPOCOs.TestObjects
     [POCOTest]
     public class PublicClassWithOnlyPrivateFields
     {
-#pragma warning disable CS0414
         private bool MyBool = false;
 
         private byte MyByte = 0;
@@ -46,6 +45,5 @@ namespace TestPOCOs.TestObjects
         private TimeSpan MyTimeSpan = default;
 
         private Guid MyGuid = Guid.Empty;
-#pragma warning restore CS0414
     }
 }

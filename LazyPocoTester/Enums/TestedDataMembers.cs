@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace LazyPocoTester.Enums
+﻿namespace LazyPocoTester.Enums
 {
     [Flags]
     public enum TestedDataMembers
     {
-        Properties = 0,
-        Fields = 1 << 0,
-        PropertiesAndFields = Properties | Fields
+        None = 0,
+        Properties = 1,
+        Fields = 1 << 1,
+        NoBackingFields = 1 << 2,
+
+        // Short hands
+        PropertiesAndFields = Properties | Fields,
+        PropertiesAndFieldsNoBacking = Properties | Fields | NoBackingFields
     }
 }

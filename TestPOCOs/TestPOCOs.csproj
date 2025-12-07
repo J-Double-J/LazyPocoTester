@@ -5,6 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+	
+	<PropertyGroup>
+		<!-- Remove warnings for unused private or public fields -->
+		<NoWarn>CS0169;CS0414</NoWarn>
+	</PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LazyPocoTester\LazyPocoTester.csproj" />

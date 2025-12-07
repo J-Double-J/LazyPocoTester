@@ -10,12 +10,12 @@ namespace LazyPocoTester
         /// <summary>
         /// Gets the properties that needs to be tested.
         /// </summary>
-        internal PropertyInfo[] Properties { get; set; } = [];
+        internal List<PropertyInfo> Properties { get; set; } = [];
 
         /// <summary>
         /// Gets the fields that need to be tested.
         /// </summary>
-        internal FieldInfo[] Fields { get; set; } = [];
+        internal List<FieldInfo> Fields { get; set; } = [];
 
         /// <summary>
         /// The identified constructor that should be used for creating a type.<br/>
